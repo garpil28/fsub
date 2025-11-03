@@ -8,6 +8,7 @@ import os
 from dotenv import load_dotenv
 from pyrogram import Client
 from utils.db import db
+from services.license import LicenseManager
 
 # === Logging setup ===
 logging.basicConfig(
@@ -22,7 +23,7 @@ API_ID = int(os.getenv("API_ID", "0"))
 API_HASH = os.getenv("API_HASH")
 MONGO_URI = os.getenv("MONGO_URI")
 OWNER_ID = int(os.getenv("OWNER_ID", "0"))
-LOG_GROUP_ID = int(os.getenv("LOG_GROUP_ID", "0"))  # Grup log ID
+LOG_GROUP_ID = os.getenv("LOG_GROUP_ID")  # optional log grup ID
 
 if not all([BOT_TOKEN, API_ID, API_HASH, MONGO_URI]):
     raise SystemExit("❌ Gagal start — Pastikan .env lengkap dan benar!")
@@ -37,25 +38,27 @@ bot = Client(
     plugins=dict(root="handlers")
 )
 
-# === Kirim log ke grup ===
-async def send_log(text: str):
-    """Kirim log ke grup log jika diset."""
-    if LOG_GROUP_ID != 0:
+license_manager = LicenseManager()
+
+# === Background Task: auto deactivate expired licenses ===
+async def auto_license_checker():
+    """Loop background untuk menonaktifkan lisensi kadaluarsa"""
+    while True:
         try:
-            await bot.send_message(LOG_GROUP_ID, f"🧾 *LOG SYSTEM:*\n{text}")
+            await license_manager.deactivate_expired_licenses()
         except Exception as e:
-            logging.warning(f"Gagal kirim log ke grup: {e}")
+            logging.error(f"Gagal menjalankan auto license check: {e}")
+        await asyncio.sleep(3600)  # cek setiap 1 jam
 
 # === Startup Function ===
 async def startup():
     logging.info("🔁 Menghubungkan ke Mongo Atlas...")
     await db.connect(MONGO_URI)
-
+    await license_manager.init_collection()
     logging.info("✅ MongoDB Atlas Connected.")
     await db.add_owner(OWNER_ID)
     logging.info("👑 Owner terdaftar: %s", OWNER_ID)
 
-    # Notifikasi ke owner
     try:
         await bot.send_message(
             OWNER_ID,
@@ -64,14 +67,22 @@ async def startup():
     except Exception as e:
         logging.warning(f"Gagal kirim notifikasi owner: {e}")
 
-    await send_log("✅ Bot AutopostPro berhasil aktif dan siap digunakan.")
+    if LOG_GROUP_ID:
+        try:
+            await bot.send_message(
+                int(LOG_GROUP_ID),
+                "📋 [LOG] Bot berhasil diaktifkan dan terkoneksi ke database Mongo."
+            )
+        except Exception as e:
+            logging.warning(f"Gagal kirim log ke grup: {e}")
 
 # === Main Runner ===
 async def main():
     await startup()
+    asyncio.create_task(auto_license_checker())
     logging.info("🤖 Bot siap menerima pesan.")
     await bot.start()
-    await asyncio.Event().wait()  # keep running
+    await asyncio.Event().wait()  # biar bot jalan 24 jam nonstop
 
 if __name__ == "__main__":
     try:
