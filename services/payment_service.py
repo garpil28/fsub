@@ -1,12 +1,15 @@
+# services/payment_service.py
 """
 Payment Service - AutopostPro Professional Edition
 --------------------------------------------------
 Mengatur sistem pembayaran otomatis:
-- Pembeli kirim bukti transfer (foto)
+- Pembeli lihat info QR pembayaran
+- Kirim bukti transfer (foto)
 - Owner menerima notifikasi verifikasi
 - Setelah approve, pembeli otomatis dapat lisensi (limit button sesuai paket)
 """
 
+import os
 import logging
 from datetime import datetime, timedelta
 from pyrogram import Client
@@ -23,6 +26,37 @@ class PaymentService:
         self.log_channel = log_channel
         self.license_mgr = LicenseManager()
 
+    # === 📦 INFO PEMBAYARAN (dengan QR) ===
+    async def send_payment_info(self, message):
+        """Kirim info pembayaran + QR ke user"""
+        try:
+            text = (
+                "💳 **Informasi Pembayaran AutopostPro**\n\n"
+                f"📱 *Metode:* {os.getenv('PAYMENT_METHOD', 'DANA')}\n"
+                f"👤 *Nama:* {os.getenv('PAYMENT_NAME', '-')}\n"
+                f"📞 *Nomor:* `{os.getenv('PAYMENT_NUMBER', '-')}`\n\n"
+                "🧾 Kirim bukti transfer dengan cara:\n"
+                "1️⃣ Kirim foto bukti transfer\n"
+                "2️⃣ Balas foto itu dengan perintah /sendproof\n\n"
+                "📦 **Paket tersedia:**\n"
+                "• 3 Button — Rp20.000\n"
+                "• 5 Button — Rp25.000\n"
+                "• 10 Button — Rp40.000\n\n"
+                "⏳ Setelah approve, kamu otomatis dapat lisensi 30 hari."
+            )
+
+            qr_url = os.getenv("PAYMENT_QR_URL")
+            if qr_url:
+                await message.reply_photo(
+                    qr_url,
+                    caption=text
+                )
+            else:
+                await message.reply_text(text)
+        except Exception as e:
+            logging.error(f"Gagal kirim info pembayaran: {e}")
+
+    # === 🧾 HANDLE BUKTI TRANSFER ===
     async def handle_payment_proof(self, message):
         """Menangani bukti transfer dari pembeli"""
         if not message.reply_to_message or not message.reply_to_message.photo:
@@ -76,6 +110,7 @@ class PaymentService:
 
         await message.reply_text("✅ Bukti sudah dikirim ke owner. Tunggu verifikasi maksimal 24 jam.")
 
+    # === ✅ APPROVE PEMBAYARAN ===
     async def approve_payment(self, user_id: int, package_type: str):
         """Owner approve pembayaran dan set lisensi"""
         button_limit = {
@@ -87,7 +122,6 @@ class PaymentService:
         expiry = datetime.now() + timedelta(days=30)
         await self.license_mgr.add_license(user_id, button_limit, expiry)
 
-        # Kirim notifikasi ke user
         try:
             await self.bot.send_message(
                 user_id,
@@ -98,13 +132,11 @@ class PaymentService:
         except Exception:
             pass
 
-        # Notifikasi ke owner
         await self.bot.send_message(
             self.owner_id,
             f"✅ Pembayaran user `{user_id}` berhasil disetujui untuk paket {button_limit} button."
         )
 
-        # Log
         await self.bot.send_message(
             self.log_channel,
             f"🟢 Payment approved — User `{user_id}` | Paket {button_limit} button | Exp: {expiry.strftime('%d-%m-%Y')}"
@@ -112,6 +144,7 @@ class PaymentService:
 
         logging.info(f"License diberikan ke {user_id} ({button_limit} button).")
 
+    # === ❌ REJECT PEMBAYARAN ===
     async def reject_payment(self, user_id: int):
         """Owner menolak pembayaran"""
         try:
