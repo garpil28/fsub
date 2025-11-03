@@ -22,6 +22,7 @@ API_ID = int(os.getenv("API_ID", "0"))
 API_HASH = os.getenv("API_HASH")
 MONGO_URI = os.getenv("MONGO_URI")
 OWNER_ID = int(os.getenv("OWNER_ID", "0"))
+LOG_GROUP_ID = int(os.getenv("LOG_GROUP_ID", "0"))  # Grup log ID
 
 if not all([BOT_TOKEN, API_ID, API_HASH, MONGO_URI]):
     raise SystemExit("❌ Gagal start — Pastikan .env lengkap dan benar!")
@@ -35,6 +36,15 @@ bot = Client(
     in_memory=True,
     plugins=dict(root="handlers")
 )
+
+# === Kirim log ke grup ===
+async def send_log(text: str):
+    """Kirim log ke grup log jika diset."""
+    if LOG_GROUP_ID != 0:
+        try:
+            await bot.send_message(LOG_GROUP_ID, f"🧾 *LOG SYSTEM:*\n{text}")
+        except Exception as e:
+            logging.warning(f"Gagal kirim log ke grup: {e}")
 
 # === Startup Function ===
 async def startup():
@@ -53,6 +63,8 @@ async def startup():
         )
     except Exception as e:
         logging.warning(f"Gagal kirim notifikasi owner: {e}")
+
+    await send_log("✅ Bot AutopostPro berhasil aktif dan siap digunakan.")
 
 # === Main Runner ===
 async def main():
