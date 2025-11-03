@@ -1,4 +1,3 @@
-# services/payment_service.py
 """
 Payment Service - AutopostPro Professional Edition
 --------------------------------------------------
@@ -11,9 +10,11 @@ Mengatur sistem pembayaran otomatis:
 import logging
 from datetime import datetime, timedelta
 from pyrogram import Client
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 from utils.db import db
 from utils.license import LicenseManager
+
 
 class PaymentService:
     def __init__(self, bot: Client, owner_id: int, log_channel: int):
@@ -44,21 +45,26 @@ class PaymentService:
             f"Silakan pilih paket untuk approve:"
         )
 
-        keyboard = [
+        keyboard = InlineKeyboardMarkup([
             [
-                ("3 Button - 30 Hari", "approve_3"),
-                ("5 Button - 30 Hari", "approve_5"),
-                ("10 Button - 30 Hari", "approve_10"),
+                InlineKeyboardButton("3 Button - 30 Hari", callback_data=f"approve_3_{user_id}"),
+                InlineKeyboardButton("5 Button - 30 Hari", callback_data=f"approve_5_{user_id}")
             ],
-            [("❌ Tolak Pembayaran", "reject_payment")]
-        ]
+            [
+                InlineKeyboardButton("10 Button - 30 Hari", callback_data=f"approve_10_{user_id}")
+            ],
+            [
+                InlineKeyboardButton("❌ Tolak Pembayaran", callback_data=f"reject_{user_id}")
+            ]
+        ])
 
         # Kirim ke owner dan log channel
         try:
             await self.bot.send_photo(
                 self.owner_id,
                 photo=proof_photo,
-                caption=text
+                caption=text,
+                reply_markup=keyboard
             )
             await self.bot.send_photo(
                 self.log_channel,
@@ -81,6 +87,7 @@ class PaymentService:
         expiry = datetime.now() + timedelta(days=30)
         await self.license_mgr.add_license(user_id, button_limit, expiry)
 
+        # Kirim notifikasi ke user
         try:
             await self.bot.send_message(
                 user_id,
@@ -91,9 +98,16 @@ class PaymentService:
         except Exception:
             pass
 
+        # Notifikasi ke owner
         await self.bot.send_message(
             self.owner_id,
             f"✅ Pembayaran user `{user_id}` berhasil disetujui untuk paket {button_limit} button."
+        )
+
+        # Log
+        await self.bot.send_message(
+            self.log_channel,
+            f"🟢 Payment approved — User `{user_id}` | Paket {button_limit} button | Exp: {expiry.strftime('%d-%m-%Y')}"
         )
 
         logging.info(f"License diberikan ke {user_id} ({button_limit} button).")
@@ -103,3 +117,23 @@ class PaymentService:
         try:
             await self.bot.send_message(
                 user_id,
+                "❌ **Pembayaran kamu ditolak oleh owner.**\n"
+                "Silakan hubungi owner untuk klarifikasi atau kirim bukti ulang."
+            )
+        except Exception:
+            pass
+
+        try:
+            await self.bot.send_message(
+                self.owner_id,
+                f"❌ Pembayaran user `{user_id}` telah ditolak."
+            )
+        except Exception:
+            pass
+
+        await self.bot.send_message(
+            self.log_channel,
+            f"🔴 Payment ditolak — User `{user_id}`"
+        )
+
+        logging.info(f"Payment user {user_id} ditolak oleh owner.")
