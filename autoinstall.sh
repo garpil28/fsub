@@ -1,60 +1,72 @@
 #!/bin/bash
 # ============================================
-# Autoinstall Script for AutopostPro Bot
-# By Garfield Dev Team
+# 🧩 AutopostPro Telegram Bot Auto Installer
+# By Garfield STORE / Lusiana Kurniawati
 # ============================================
 
 set -e
 
 echo "🚀 Memulai instalasi AutopostPro..."
+sleep 2
 
-# --- Update System ---
+# === 1. Update sistem dan install dependensi dasar ===
+echo "📦 Menginstal dependensi sistem..."
 apt update -y && apt upgrade -y
-
-# --- Install Dependensi Utama ---
 apt install -y python3 python3-pip git curl
 
-# --- Clone Repo ---
-if [ ! -d "/root/autopostpro" ]; then
-    git clone https://github.com/username/autopostpro.git /root/autopostpro
-else
-    echo "📦 Folder sudah ada, skip clone..."
+# === 2. Clone repo (hapus versi lama jika ada) ===
+cd /root
+if [ -d "autopostpro" ]; then
+    echo "🧹 Menghapus instalasi lama..."
+    rm -rf autopostpro
 fi
 
-cd /root/autopostpro
+echo "📥 Meng-clone repository AutopostPro..."
+read -p "Masukkan URL repo GitHub kamu (contoh: https://github.com/user/autopostpro): " REPO_URL
+git clone "$REPO_URL" autopostpro
 
-# --- Install Requirements ---
-pip3 install --upgrade pip
-pip3 install -r requirements.txt
+cd autopostpro
 
-# --- Setup .env jika belum ada ---
-if [ ! -f ".env" ]; then
-    echo "📝 Membuat file .env baru..."
-    cat <<EOF > .env
-BOT_TOKEN=ISI_TOKEN_BOT
-API_ID=ISI_API_ID
-API_HASH=ISI_API_HASH
-MONGO_URI=ISI_MONGO_ATLAS
-OWNER_ID=ISI_ID_OWNER
-LOG_CHANNEL=ISI_ID_LOG_CHANNEL
-PAYMENT_QR=https://files.catbox.moe/tq9d36.jpg
+# === 3. Instal requirements ===
+echo "⚙️ Menginstal library Python..."
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# === 4. Buat file .env otomatis ===
+echo "🧾 Membuat file konfigurasi (.env)..."
+read -p "BOT_TOKEN: " BOT_TOKEN
+read -p "API_ID: " API_ID
+read -p "API_HASH: " API_HASH
+read -p "OWNER_ID (ID Telegram kamu): " OWNER_ID
+read -p "LOG_CHANNEL ID (misal -100xxxx): " LOG_CHANNEL
+read -p "MONGO_URI (MongoDB Atlas): " MONGO_URI
+
+cat <<EOF > .env
+BOT_TOKEN=$BOT_TOKEN
+API_ID=$API_ID
+API_HASH=$API_HASH
+OWNER_ID=$OWNER_ID
+LOG_CHANNEL=$LOG_CHANNEL
+MONGO_URI=$MONGO_URI
+QR_PAYMENT_URL=https://files.catbox.moe/tq9d36.jpg
 EOF
-else
-    echo "✅ File .env sudah ada, skip..."
-fi
 
-# --- Buat start.sh ---
-echo "⚙️ Membuat start.sh..."
-cat <<'EOL' > start.sh
+echo "✅ File .env berhasil dibuat."
+
+# === 5. Buat start.sh ===
+cat <<'EOF' > start.sh
 #!/bin/bash
-echo "🚀 Menjalankan AutopostPro Bot..."
+cd /root/autopostpro
 python3 main.py
-EOL
-chmod +x start.sh
+EOF
 
-# --- Buat Systemd Service ---
-echo "🧩 Membuat service systemd..."
-cat <<'EOL' > /etc/systemd/system/autopostpro.service
+chmod +x start.sh
+echo "✅ File start.sh dibuat & bisa dijalankan."
+
+# === 6. Buat service systemd ===
+SERVICE_PATH="/etc/systemd/system/autopostpro.service"
+
+cat <<EOF > $SERVICE_PATH
 [Unit]
 Description=AutopostPro Telegram Bot
 After=network.target
@@ -73,13 +85,15 @@ Environment="TZ=Asia/Jakarta"
 
 [Install]
 WantedBy=multi-user.target
-EOL
+EOF
 
-# --- Reload dan Enable Service ---
+# === 7. Aktifkan service ===
 systemctl daemon-reload
 systemctl enable autopostpro
 systemctl restart autopostpro
 
+echo ""
 echo "✅ Instalasi selesai!"
-echo "📡 Cek status bot dengan: systemctl status autopostpro"
-echo "📜 Log bot: journalctl -fu autopostpro"
+echo "💡 Bot kamu sekarang aktif & otomatis nyala ulang saat VPS restart."
+echo "🔍 Cek status dengan: systemctl status autopostpro"
+echo "📜 Lihat log real-time: journalctl -fu autopostpro"
