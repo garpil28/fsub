@@ -1,10 +1,32 @@
-# === Telegram Bot Configuration ===
-BOT_TOKEN=isi_token_bot_kamu_di_sini
-API_ID=1234567
-API_HASH=isi_api_hash_kamu_di_sini
+# ===============================
+# 🤖 AutopostPro Professional Bot
+# ===============================
+
+# === Telegram Bot Credentials ===
+BOT_TOKEN=1234567890:ABCDEF_your_bot_token_here
+API_ID=123456
+API_HASH=your_api_hash_here
 
 # === MongoDB Atlas Connection ===
-MONGO_URI=mongodb+srv://username:password@cluster0.mongodb.net/?retryWrites=true&w=majority
+# Contoh format:
+# mongodb+srv://username:password@cluster0.mongodb.net/?retryWrites=true&w=majority
+MONGO_URI=mongodb+srv://user:password@cluster0.mongodb.net/?retryWrites=true&w=majority
 
-# === Bot Owner ===
-OWNER_ID=123456789  # ID Telegram owner utama bot
+# === Owner Information ===
+OWNER_ID=123456789   # ID Telegram owner utama
+
+# === Log Channel (wajib private / group log admin) ===
+LOG_CHANNEL=-1001234567890
+
+# === Payment Settings ===
+PAYMENT_METHOD=DANA
+PAYMENT_NUMBER=081219623569
+PAYMENT_NAME=Lusiana Kurniawati
+PAYMENT_QR_URL=https://files.catbox.moe/tq9d36.jpg
+
+# === Bot Settings ===
+BOT_NAME=AutopostPro
+LICENSE_DURATION_DAYS=30
+
+# === Mode Production ===
+ENVIRONMENT=production
