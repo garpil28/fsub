@@ -1,0 +1,20 @@
+# --- CORE BOT ---
+pyrogram==2.0.106
+TgCrypto
+
+# --- DATABASE ---
+motor
+pymongo
+
+# --- ENV CONFIG ---
+python-dotenv
+
+# --- TIME & UTILS ---
+pytz
+aiofiles
+
+# --- LOGGING & COLOR ---
+coloredlogs
+
+# --- OPTIONAL (untuk fitur lanjutan / pembayaran / API eksternal) ---
+requests
