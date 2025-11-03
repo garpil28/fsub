@@ -24,6 +24,10 @@ PAYMENT_NUMBER=081219623569
 PAYMENT_NAME=Lusiana Kurniawati
 PAYMENT_QR_URL=https://files.catbox.moe/tq9d36.jpg
 
+# === PAYMENT CONFIG ===
+LOG_CHANNEL=123456789
+QR_PAYMENT_URL=https://files.catbox.moe/tq9d36.jpg
+
 # === Bot Settings ===
 BOT_NAME=AutopostPro
 LICENSE_DURATION_DAYS=30
